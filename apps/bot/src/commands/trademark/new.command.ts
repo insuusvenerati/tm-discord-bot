@@ -8,12 +8,16 @@ import {
   UsePipes,
 } from '@discord-nestjs/core';
 import { Injectable } from '@nestjs/common';
+import { EmbedBuilder } from 'discord.js';
 import { CommandValidationFilter } from 'src/exception/command-validation-filter';
-import { PrismaExceptionFilter } from 'src/exception/prisma-exception-filter';
+import {
+  PrismaExceptionFilter,
+  PrismaUnknownRequestExceptionFilter,
+} from 'src/exception/prisma-exception-filter';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NewTrademarkDto } from './dto/new.dto';
 
-@UseFilters(CommandValidationFilter, PrismaExceptionFilter)
+@UseFilters(CommandValidationFilter, PrismaExceptionFilter, PrismaUnknownRequestExceptionFilter)
 @Command({
   name: 'new',
   description: 'Register a new trademark phrase or word',
@@ -26,21 +30,35 @@ export class NewTrademarkCommand implements DiscordTransformedCommand<NewTradema
   async handler(
     @Payload() dto: NewTrademarkDto,
     { interaction }: TransformedCommandExecutionContext,
-  ): Promise<string> {
-    const data = {
-      name: dto.name.toLowerCase(),
-      phrase: dto.phrase.toLowerCase(),
-      user: interaction.user.id,
-      username: interaction.user.username,
-    };
+  ) {
+    const embeds = new EmbedBuilder()
+      .setColor('Green')
+      .setTitle(`Trademark common name: ${dto.name}`)
+      .setAuthor({ name: interaction.user.username, iconURL: interaction.user.avatarURL() })
+      .setDescription(`Trademarked phrase: ${dto.phrase}`)
+      .setTimestamp();
 
     if (!dto.phrase.match('[a-zA-Z]'))
       await interaction.reply(`${dto.name} contains illegal characters`);
 
     await this.prisma.trademark.create({
-      data,
+      data: {
+        name: dto.name,
+        phrase: dto.phrase,
+        user: {
+          connectOrCreate: {
+            create: {
+              username: interaction.user.username,
+              id: interaction.user.id,
+            },
+            where: {
+              id: interaction.user.id,
+            },
+          },
+        },
+      },
     });
 
-    return `Trademark with common name: ${dto.name} registered successfully to ${data.username}`;
+    if (interaction.isCommand()) await interaction.reply({ embeds: [embeds] });
   }
 }

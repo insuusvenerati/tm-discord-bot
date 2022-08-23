@@ -26,12 +26,11 @@ export class BotGateway {
       },
       select: {
         name: true,
-        username: true,
         user: true,
       },
     });
     if (!message.author.bot && messages && messages.name) {
-      if (message.author.id !== messages.user) {
+      if (message.author.id !== messages.user.username) {
         await message.delete();
         await message.channel.send('You cannot use that trademarked phrase 🦉');
       }

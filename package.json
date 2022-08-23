@@ -7,7 +7,11 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "services": "docker compose -f apps/bot/docker-compose.yml up -d",
+    "prisma:migrate": "yarn workspace @tm-bot/bot prisma migrate",
+    "prisma:studio": "yarn workspace @tm-bot/bot prisma studio"
   },
   "workspaces": [
     "apps/*"
